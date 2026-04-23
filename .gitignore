@@ -1,0 +1,57 @@
+# ========================
+# 🔐 ENV & Secrets
+# ========================
+.env
+*.env
+.env.*
+
+# ========================
+# 🐳 Docker
+# ========================
+*.log
+docker-compose.override.yml
+
+# ========================
+# 🐍 Python
+# ========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+
+# ========================
+# 🧠 Odoo Runtime Data
+# ========================
+var/lib/odoo/*
+!var/lib/odoo/.gitkeep
+
+# PostgreSQL data
+var/lib/postgresql/*
+!var/lib/postgresql/.gitkeep
+
+# ========================
+# 📦 Odoo Sessions & Temp
+# ========================
+*.pid
+*.sock
+
+# ========================
+# 🧪 Testing / Coverage
+# ========================
+.coverage
+htmlcov/
+
+# ========================
+# 🧰 IDE / Editor
+# ========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ========================
+# 🗂 OS Files
+# ========================
+.DS_Store
+Thumbs.db
