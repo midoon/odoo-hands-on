@@ -13,6 +13,7 @@ help:
 	@echo " psql	   - Access the PostgreSQL database shell"
 	@echo " logs odoo	   - View the logs of the Odoo container"
 	@echo " logs db	   - View the logs of the PostgreSQL container"
+	@echo " addon <addon_name> - Restart instance with specified addon"
 
 
 start:
@@ -37,3 +38,4 @@ logs-odoo:
 
 logs-db:
 	${DOCKER_COMPOSE} logs ${CONTAINER_DB}
+

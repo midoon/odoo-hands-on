@@ -1,0 +1,37 @@
+untuk deveper experience yang lebih oke,
+bisa melakukan instalasi odoo di venv untuk intellesense:
+
+note: jika menggunakan perintah
+$ python --version [maka akan menggunakan versi 3.12]
+
+gunakanlah perintah $ py [akan menggunakan versi 3.14]
+
+CREATE Virtual Env in Powershell
+py -m venv venv
+
+
+Cara aktivasi powershell:
+.\venv\Scripts\Activate
+
+Cara nonaktif powershell:
+deactivate
+
+
+install odoo di dalam venv:
+pip install -e git+https://github.com/odoo/odoo@17.0#egg=odoo
+
+pakai odoo17 karena di docker compose kita pakai odoo 17
+
+
+============================================================================
+CARA PAKAI TASKFILE
+============================================================================
+
+# Setelah buat file estate.property model:
+task dev-upgrade MODULE=estate
+
+# Untuk melihat warning seperti di exercise:
+task check-warnings MODULE=estate
+
+# Atau follow log secara live setelah upgrade:
+task upgrade MODULE=estate && task reload && task logs-odoo-follow

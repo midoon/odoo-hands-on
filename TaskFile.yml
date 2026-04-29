@@ -1,0 +1,144 @@
+version: "3"
+
+vars:
+  WEB_DB_NAME: odoo_development
+  DOCKER: docker
+  DOCKER_COMPOSE: "{{.DOCKER}} compose"
+  CONTAINER_ODOO: odoo # container_name (untuk docker exec)
+  SERVICE_ODOO: odoo # service name (untuk docker compose)
+  SERVICE_DB: postgres # service name (untuk docker compose)
+  CONTAINER_DB: odoo-postgres # container_name (untuk docker exec)
+  DEFAULT_MODULE: estate
+  # Addons path sesuai struktur volume di docker-compose
+  ADDONS_PATH: /mnt/extra-addons
+
+tasks:
+  help:
+    desc: Show available commands
+    cmds:
+      - echo "Available tasks:"
+      - echo "  task start                        - Start all containers"
+      - echo "  task stop                         - Stop all containers"
+      - echo "  task restart                      - Restart all containers"
+      - echo "  task reload                       - Restart only Odoo service"
+      - echo "  task console                      - Access Odoo shell"
+      - echo "  task psql                         - Access PostgreSQL shell"
+      - echo "  task logs-odoo                    - View Odoo logs (last 50 lines)"
+      - echo "  task logs-odoo-follow             - Follow Odoo logs live (Ctrl+C to stop)"
+      - echo "  task logs-db                      - View PostgreSQL logs"
+      - echo "  task upgrade MODULE=<name>        - Upgrade module (creates new container)"
+      - echo "  task dev-upgrade MODULE=<name>    - Upgrade module then reload Odoo"
+      - echo "  task check-warnings MODULE=<name> - Upgrade and stream logs for warnings"
+
+  # ============================================================
+  # Container lifecycle
+  # ============================================================
+
+  start:
+    desc: Start containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} up -d"
+
+  stop:
+    desc: Stop containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} down"
+
+  restart:
+    desc: Restart all containers
+    cmds:
+      - "{{.DOCKER_COMPOSE}} down"
+      - "{{.DOCKER_COMPOSE}} up -d"
+
+  reload:
+    desc: Restart only Odoo service (tanpa down postgres)
+    cmds:
+      - "{{.DOCKER_COMPOSE}} restart {{.SERVICE_ODOO}}"
+
+  # ============================================================
+  # Shell access
+  # ============================================================
+
+  console:
+    desc: Access Odoo shell
+    cmds:
+      - >
+        {{.DOCKER}} exec -it {{.CONTAINER_ODOO}}
+        odoo shell
+        --addons-path={{.ADDONS_PATH}}
+        --db_host={{.SERVICE_DB}}
+        -d {{.WEB_DB_NAME}}
+        -r odoo
+        -w odoo
+
+  psql:
+    desc: Access PostgreSQL shell
+    cmds:
+      - "{{.DOCKER}} exec -it {{.CONTAINER_DB}} psql -U odoo -d {{.WEB_DB_NAME}}"
+
+  # ============================================================
+  # Logs
+  # ============================================================
+
+  logs-odoo:
+    desc: View Odoo logs (last 50 lines)
+    cmds:
+      - "{{.DOCKER_COMPOSE}} logs --tail=50 {{.SERVICE_ODOO}}"
+
+  logs-odoo-follow:
+    desc: Follow Odoo logs live (Ctrl+C to stop)
+    cmds:
+      - "{{.DOCKER_COMPOSE}} logs -f {{.SERVICE_ODOO}}"
+
+  logs-db:
+    desc: View PostgreSQL logs
+    cmds:
+      - "{{.DOCKER_COMPOSE}} logs --tail=50 {{.SERVICE_DB}}"
+
+  # ============================================================
+  # Module upgrade
+  # ============================================================
+
+  upgrade:
+    desc: "Upgrade a module via temporary container. Usage: task upgrade MODULE=estate"
+    vars:
+      MODULE: "{{.MODULE | default .DEFAULT_MODULE}}"
+      DB: "{{.DB | default .WEB_DB_NAME}}"
+    cmds:
+      - >
+        {{.DOCKER_COMPOSE}} run --rm {{.SERVICE_ODOO}}
+        odoo
+        --addons-path={{.ADDONS_PATH}}
+        --db_host={{.SERVICE_DB}}
+        -d {{.DB}}
+        -u {{.MODULE}}
+        --stop-after-init
+
+  dev-upgrade:
+    desc: "Upgrade module lalu reload Odoo. Usage: task dev-upgrade MODULE=estate"
+    vars:
+      MODULE: "{{.MODULE | default .DEFAULT_MODULE}}"
+      DB: "{{.DB | default .WEB_DB_NAME}}"
+    cmds:
+      # 1. Upgrade dulu (apply schema changes via temp container)
+      - task: upgrade
+        vars:
+          MODULE: "{{.MODULE}}"
+          DB: "{{.DB}}"
+      # 2. Baru reload service agar Odoo serve dengan schema terbaru
+      - task: reload
+
+  check-warnings:
+    desc: "Upgrade module dan tampilkan log startup untuk melihat warnings. Usage: task check-warnings MODULE=estate"
+    vars:
+      MODULE: "{{.MODULE | default .DEFAULT_MODULE}}"
+      DB: "{{.DB | default .WEB_DB_NAME}}"
+    cmds:
+      - task: upgrade
+        vars:
+          MODULE: "{{.MODULE}}"
+          DB: "{{.DB}}"
+      - task: reload
+      # Beri waktu Odoo startup lalu tampilkan log (termasuk WARNING)
+      - sleep 5
+      - "{{.DOCKER_COMPOSE}} logs --tail=100 {{.SERVICE_ODOO}}"
